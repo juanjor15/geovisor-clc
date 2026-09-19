@@ -1,0 +1,2615 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Geovisor CLC</title>
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+    <style>
+        :root {
+            --bg: #081f2d;
+            --panel: #081f2d;
+            --panel-2: #0d2c3d;
+            --text: #fbe550;
+            --muted: #b9dbe3;
+            --line: rgba(149, 202, 214, 0.3);
+            --primary: #081f2d;
+            --primary-dark: #04131c;
+            --secondary: #95cad6;
+            --tertiary: #fbe550;
+            --danger: #a6372d;
+            --shadow: 0 16px 40px rgba(1, 12, 18, 0.38);
+            --shadow-soft: 0 8px 22px rgba(1, 12, 18, 0.24);
+            color-scheme: dark;
+            font-family:
+                Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+                "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 420px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow: auto;
+            max-height: 100vh;
+            padding: 24px;
+            border-right: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+
+        .brand {
+            display: grid;
+            gap: 8px;
+        }
+
+        .eyebrow {
+            margin: 0;
+            color: var(--secondary);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 0;
+            font-size: 27px;
+            line-height: 1.08;
+            color: var(--tertiary);
+        }
+
+        h2 {
+            margin-bottom: 12px;
+            font-size: 16px;
+            color: var(--tertiary);
+        }
+
+        h3 {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        p {
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
+        .card {
+            padding: 17px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel-2);
+            box-shadow: var(--shadow-soft);
+        }
+
+        .service-card summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            cursor: pointer;
+            color: var(--tertiary);
+            font-size: 16px;
+            font-weight: 800;
+            list-style: none;
+        }
+
+        .service-card summary::-webkit-details-marker { display: none; }
+
+        .service-card summary::after {
+            content: "+";
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            border-radius: 999px;
+            color: var(--primary);
+            background: var(--secondary);
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .service-card[open] summary::after { content: "−"; }
+
+        .service-card .status-grid { margin-top: 14px; }
+
+        .status-grid,
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(149, 202, 214, 0.1);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #c2c8c3;
+        }
+
+        .status-pill.ok .dot {
+            background: #1a9d58;
+        }
+
+        .status-pill.warn .dot {
+            background: var(--tertiary);
+        }
+
+        button.status-pill {
+            justify-content: flex-start;
+            text-align: left;
+        }
+
+        button.status-pill:hover,
+        button.status-pill.active {
+            border-color: var(--secondary);
+            color: var(--tertiary);
+            background: rgba(149, 202, 214, 0.18);
+        }
+
+        .service-detail {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(3, 18, 27, 0.72);
+        }
+
+        .service-detail.visible { display: block; }
+
+        .service-detail strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--tertiary);
+            font-size: 12px;
+        }
+
+        .service-detail code {
+            display: block;
+            max-height: 280px;
+            overflow: auto;
+            overflow-wrap: anywhere;
+            color: var(--secondary);
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            color: var(--tertiary);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-height: 40px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--primary);
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        #downloadFormat,
+        #downloadFormat:hover,
+        #downloadFormat:focus {
+            border-color: var(--secondary);
+            color: var(--primary);
+            background: #fff;
+            color-scheme: light;
+        }
+
+        #downloadFormat option {
+            color: var(--primary);
+            background: #fff;
+            color-scheme: light;
+        }
+
+        #downloadFormat option:hover,
+        #downloadFormat option:focus,
+        #downloadFormat option:checked {
+            color: var(--primary) !important;
+            background: var(--secondary) !important;
+        }
+
+        #downloadButton,
+        #downloadButton:hover,
+        #downloadButton:focus-visible {
+            color: var(--primary);
+        }
+
+        #downloadButton:hover,
+        #downloadButton:focus-visible {
+            background: var(--tertiary);
+        }
+
+        .report-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 14px;
+        }
+
+        .report-actions button {
+            width: 100%;
+        }
+
+        button {
+            min-height: 40px;
+            cursor: pointer;
+            border: 0;
+            border-radius: 10px;
+            color: var(--primary);
+            background: var(--secondary);
+            font-weight: 800;
+        }
+
+        button:hover {
+            color: var(--primary);
+            background: var(--tertiary);
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.65;
+        }
+
+        button.secondary {
+            border: 1px solid var(--secondary);
+            color: var(--primary);
+            background: var(--secondary);
+        }
+
+        button.secondary:hover {
+            background: var(--tertiary);
+        }
+
+        button.active {
+            outline: 3px solid rgba(149, 202, 214, 0.52);
+            color: var(--primary);
+            background: var(--tertiary);
+        }
+
+        .hint {
+            margin: 0;
+            font-size: 12px;
+        }
+
+        .metric {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(149, 202, 214, 0.08);
+        }
+
+        .metric strong {
+            display: block;
+            font-size: 22px;
+        }
+
+        .metric span {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .map-wrap {
+            position: relative;
+            min-height: 100vh;
+        }
+
+        #map {
+            position: absolute;
+            inset: 0;
+        }
+
+        .legend {
+            position: absolute;
+            z-index: 450;
+            left: 16px;
+            bottom: 120px;
+            max-width: 260px;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(8, 31, 45, 0.96);
+            box-shadow: var(--shadow);
+            transition: bottom 180ms ease;
+        }
+
+        .map-wrap.basemap-open .legend {
+            bottom: 222px;
+        }
+
+        .legend-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+            min-height: 36px;
+            padding: 8px 10px;
+            color: var(--primary);
+            background: var(--secondary);
+            border: 1px solid var(--line);
+        }
+
+        .legend-content {
+            display: none;
+            max-height: 44vh;
+            overflow: auto;
+            margin-top: 10px;
+        }
+
+        .legend.open .legend-content {
+            display: block;
+        }
+
+        .legend img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .opacity-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+            color: var(--tertiary);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .opacity-row output {
+            min-width: 42px;
+            text-align: right;
+            color: var(--muted);
+        }
+
+        .layer-opacity-control input[type="range"] {
+            width: 100%;
+            min-height: auto;
+            padding: 0;
+            accent-color: var(--primary);
+        }
+
+        .layer-opacity-control {
+            display: grid;
+            gap: 7px;
+            margin: 4px 0 8px 24px;
+            padding: 9px 10px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(149, 202, 214, 0.14);
+        }
+
+        .layer-opacity-control .opacity-row {
+            font-size: 11px;
+        }
+
+        .layer-opacity-control output {
+            min-width: 36px;
+            color: var(--tertiary);
+            text-align: right;
+        }
+
+        .leaflet-top.leaflet-left {
+            top: 16px;
+            left: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .leaflet-top.leaflet-left .leaflet-control {
+            float: none;
+            margin: 0;
+        }
+
+        .leaflet-control-layers {
+            overflow: hidden;
+            border: 0 !important;
+            border-radius: 16px;
+            background: rgba(8, 31, 45, 0.96);
+            box-shadow: var(--shadow);
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .leaflet-control-layers-expanded {
+            min-width: 238px;
+            padding: 12px 14px;
+        }
+
+        .leaflet-control-layers-toggle {
+            position: relative;
+            width: 92px !important;
+            height: 42px !important;
+            border-radius: 14px;
+            background-color: var(--secondary);
+            background-image: none !important;
+        }
+
+        .leaflet-control-layers-toggle::before {
+            content: "";
+            position: absolute;
+            top: 11px;
+            left: 12px;
+            width: 18px;
+            height: 18px;
+            background:
+                linear-gradient(135deg, transparent 46%, var(--primary) 47% 53%, transparent 54%),
+                linear-gradient(45deg, transparent 40%, var(--secondary) 41% 49%, transparent 50%);
+            border: 2px solid var(--primary);
+            border-radius: 4px;
+            transform: rotate(45deg) scale(0.72);
+            box-shadow: 5px 5px 0 -2px var(--secondary), 7px 7px 0 -2px var(--tertiary);
+        }
+
+        .leaflet-control-layers-toggle::after {
+            content: "Capas";
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            color: var(--primary-dark);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .layer-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .layer-panel-header h3 {
+            margin: 0;
+            color: var(--tertiary);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .layer-close {
+            min-height: 30px;
+            width: 30px;
+            padding: 0;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            color: var(--primary);
+            background: var(--secondary);
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .leaflet-control-layers-overlays::before {
+            display: block;
+            margin: 2px 0 8px;
+            color: var(--tertiary);
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .leaflet-control-layers-overlays::before { content: none; }
+
+        .leaflet-control-layers-separator {
+            margin: 10px -14px;
+        }
+
+        .leaflet-control-layers label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 7px 0;
+            font-size: 13px;
+            font-weight: 650;
+        }
+
+        .leaflet-control-layers input {
+            width: auto;
+            min-height: auto;
+            accent-color: var(--tertiary);
+        }
+
+        .leaflet-control-zoom a {
+            border-color: var(--line) !important;
+            color: var(--primary) !important;
+            background: var(--secondary) !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: var(--tertiary) !important;
+        }
+
+        .measure-control,
+        .buffer-control {
+            overflow: hidden;
+            border-radius: 16px;
+            background: rgba(8, 31, 45, 0.96);
+            box-shadow: var(--shadow);
+        }
+
+        .measure-control-toggle,
+        .buffer-control-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            width: auto;
+            min-height: 42px;
+            padding: 0 13px;
+            border-radius: 14px;
+            color: var(--primary-dark);
+            background: var(--secondary);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .measure-control-toggle:hover,
+        .buffer-control-toggle:hover {
+            color: var(--primary);
+        }
+
+        .measure-control-panel,
+        .buffer-control-panel {
+            display: none;
+            width: 300px;
+            padding: 14px;
+        }
+
+        .measure-control.open .measure-control-toggle {
+            display: none;
+        }
+
+        .measure-control.open .measure-control-panel {
+            display: block;
+        }
+
+        .buffer-control.open .buffer-control-toggle {
+            display: none;
+        }
+
+        .buffer-control.open .buffer-control-panel {
+            display: block;
+        }
+
+        .basemap-control,
+        .overview-control {
+            position: relative;
+            padding: 10px;
+            border-radius: 16px;
+            background: rgba(8, 31, 45, 0.96);
+            box-shadow: var(--shadow);
+        }
+
+        .basemap-control-title,
+        .overview-control-title {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--tertiary);
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .basemap-toggle {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-height: 42px;
+            padding: 0 12px;
+            border: 1px solid var(--line);
+            color: var(--primary-dark);
+            background: var(--secondary);
+        }
+
+        .basemap-toggle:hover,
+        .basemap-control.open .basemap-toggle {
+            color: var(--primary-dark);
+            background: var(--tertiary);
+        }
+
+        .basemap-toggle-icon {
+            width: 22px;
+            height: 16px;
+            border: 2px solid currentColor;
+            border-radius: 4px;
+            box-shadow: 4px 4px 0 -2px #fff, 6px 6px 0 -2px var(--secondary);
+            transform: rotate(-5deg);
+        }
+
+        .basemap-menu {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            min-width: max-content;
+            padding: 10px;
+            border-radius: 14px;
+            background: rgba(8, 31, 45, 0.98);
+            box-shadow: var(--shadow);
+        }
+
+        .basemap-control.open .basemap-menu {
+            display: block;
+        }
+
+        .basemap-options {
+            display: flex;
+            gap: 7px;
+        }
+
+        .basemap-option {
+            display: grid;
+            gap: 5px;
+            width: 76px;
+            min-height: 0;
+            padding: 4px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: var(--primary-dark);
+            background: #fff;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .basemap-option:hover,
+        .basemap-option.active {
+            border-color: var(--tertiary);
+            color: var(--primary-dark);
+            background: #fff;
+        }
+
+        .basemap-preview {
+            display: block;
+            width: 64px;
+            height: 43px;
+            border-radius: 6px;
+            background-position: center;
+            background-size: cover;
+        }
+
+        .basemap-preview.osm {
+            background-image: url("https://tile.openstreetmap.org/11/593/996.png");
+        }
+
+        .basemap-preview.imagery {
+            background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/11/996/593");
+        }
+
+        .basemap-preview.topo {
+            background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/11/996/593");
+        }
+
+        #overviewMap {
+            width: 220px;
+            height: 138px;
+            overflow: hidden;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            background: #dcebed;
+            box-shadow: inset 0 0 0 1px rgba(8, 31, 45, 0.24);
+        }
+
+        #overviewMap .leaflet-control-attribution {
+            display: none;
+        }
+
+        .overview-hint {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .measure-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .measure-window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .measure-window-header h3 {
+            margin: 0;
+            color: var(--tertiary);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .measure-close {
+            min-height: 30px;
+            width: 30px;
+            border-radius: 999px;
+            color: var(--primary);
+            background: var(--secondary);
+            border: 1px solid var(--line);
+        }
+
+        .measure-close:hover {
+            background: var(--tertiary);
+        }
+
+        .table-wrap {
+            max-height: 310px;
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(149, 202, 214, 0.06);
+        }
+
+        .chart-wrap {
+            display: grid;
+            grid-template-columns: 148px minmax(0, 1fr);
+            gap: 18px;
+            align-items: center;
+            margin-top: 14px;
+        }
+
+        .pie-chart {
+            position: relative;
+            width: 148px;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: #e4eae5;
+            box-shadow: inset 0 0 0 1px rgba(23, 37, 30, 0.08);
+        }
+
+        .pie-chart::after {
+            content: "";
+            position: absolute;
+            inset: 28%;
+            border-radius: 50%;
+            background: var(--panel-2);
+            box-shadow: 0 0 0 1px rgba(23, 37, 30, 0.06);
+        }
+
+        .pie-chart-center {
+            position: absolute;
+            z-index: 1;
+            inset: 0;
+            display: grid;
+            place-content: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .pie-chart-center strong {
+            font-size: 20px;
+        }
+
+        .pie-chart-center span {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .chart-legend {
+            display: grid;
+            gap: 8px;
+            max-height: 190px;
+            overflow: auto;
+        }
+
+        .chart-legend-item {
+            display: grid;
+            grid-template-columns: 10px minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .chart-swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .chart-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--muted);
+        }
+
+        .chart-percent {
+            color: var(--text);
+            font-weight: 850;
+        }
+
+        .chart-empty {
+            grid-column: 1 / -1;
+            padding: 22px 12px;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #12394b;
+            color: var(--tertiary);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .msg {
+            min-height: 22px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .msg.error {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        .leaflet-popup-content {
+            min-width: 230px;
+            color: var(--primary);
+        }
+
+        .popup-title {
+            margin-bottom: 6px;
+            font-weight: 900;
+        }
+
+        .popup-meta {
+            color: #123f55;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .popup-meta strong {
+            color: var(--primary-dark);
+        }
+
+        @media (max-width: 980px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                max-height: none;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .map-wrap {
+                min-height: 70vh;
+            }
+
+            .leaflet-top.leaflet-left {
+                max-width: calc(100% - 82px);
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 620px) {
+
+            .measure-control-toggle,
+            .buffer-control-toggle {
+                width: 48px;
+                padding: 0;
+                font-size: 0;
+            }
+
+            .measure-control-toggle span,
+            .buffer-control-toggle span {
+                font-size: 18px;
+            }
+
+            .basemap-option {
+                width: 60px;
+            }
+
+            .basemap-preview {
+                width: 48px;
+                height: 34px;
+            }
+
+            #overviewMap {
+                width: 160px;
+                height: 100px;
+            }
+
+            .legend {
+                bottom: 112px;
+            }
+
+            .map-wrap.basemap-open .legend {
+                bottom: 204px;
+            }
+        }
+
+        @media (max-width: 440px) {
+            .chart-wrap {
+                grid-template-columns: 112px minmax(0, 1fr);
+                gap: 12px;
+            }
+
+            .pie-chart {
+                width: 112px;
+            }
+
+            .basemap-control {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="app">
+        <aside class="sidebar">
+            <header class="brand">
+                <p class="eyebrow">Coberturas de la Tierra · Colombia</p>
+                <h1>Visor de coberturas de la tierra</h1>
+                <p>
+                    Consulta espacial, mediciones, descarga de datos.
+                </p>
+            </header>
+
+            <section class="card">
+                <h2>Estadísticas consolidadas</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <strong id="totalArea">--</strong>
+                        <span>ha totales</span>
+                    </div>
+                    <div class="metric">
+                        <strong id="classCount">--</strong>
+                        <span>clases</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Resultado de consulta</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <strong id="resultCount">0</strong>
+                        <span>coberturas</span>
+                    </div>
+                    <div class="metric">
+                        <strong id="resultArea">0</strong>
+                        <span>ha consultadas</span>
+                    </div>
+                </div>
+                <div id="chartWrap" class="chart-wrap" aria-live="polite">
+                    <div class="chart-empty">Haz clic sobre una cobertura para consultar sus datos.</div>
+                </div>
+                <div class="report-actions">
+                    <button id="reportButton" class="secondary" type="button" disabled>
+                        Descargar informe PDF
+                    </button>
+                </div>
+                <p id="reportStatus" class="hint" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="card">
+                <h2>Coberturas interceptadas</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Leyenda</th>
+                                <th>Nivel 1</th>
+                                <th>Área ha</th>
+                                <th>% resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <tr>
+                                <td colspan="4">Sin consulta activa.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Descargar capa</h2>
+                <p class="hint">Exporta todas las coberturas con sus atributos.</p>
+                <div class="download-grid">
+                    <select id="downloadFormat" aria-label="Formato de descarga">
+                        <option value="geojson">GeoJSON · EPSG:4326</option>
+                        <option value="gpkg">GeoPackage · EPSG:9377</option>
+                        <option value="shapefile">Shapefile ZIP · EPSG:9377</option>
+                    </select>
+                    <button id="downloadButton" type="button">Descargar</button>
+                </div>
+                <p id="downloadStatus" class="hint" role="status" aria-live="polite"></p>
+            </section>
+
+            <details class="card service-card">
+                <summary>Estado de servicios</summary>
+                <div class="status-grid">
+                    <button id="apiStatus" class="status-pill warn" type="button" data-service="api"><span class="dot"></span> API</button>
+                    <button id="dbStatus" class="status-pill warn" type="button" data-service="postgis"><span class="dot"></span> PostGIS</button>
+                    <button id="wmsStatus" class="status-pill warn" type="button" data-service="wms"><span class="dot"></span> WMS</button>
+                    <button id="wfsStatus" class="status-pill warn" type="button" data-service="wfs"><span class="dot"></span> WFS</button>
+                    <button id="featureStatus" class="status-pill warn" type="button" data-service="srid"><span class="dot"></span> Cargando</button>
+                </div>
+                <div id="serviceDetail" class="service-detail" aria-live="polite"></div>
+            </details>
+        </aside>
+
+        <section class="map-wrap">
+            <div id="map"></div>
+            <div id="legendPanel" class="legend">
+                <button id="legendToggle" class="legend-toggle" type="button" aria-expanded="false">
+                    <span>Leyenda</span>
+                    <span id="legendToggleIcon">+</span>
+                </button>
+                <div class="legend-content">
+                    <img alt="Leyenda WMS de coberturas CLC" src="/geoserver/clc/wms?request=GetLegendGraphic&version=1.0.0&format=image/png&layer=clc:land_cover&style=CLC_2018">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/vendor/leaflet/leaflet.js"></script>
+    <script>
+        const API_BASE = "/api/v1";
+        const WMS_URL = "/geoserver/clc/wms";
+        const WFS_URL = "/geoserver/clc/wfs";
+        const LAYER_NAME = "clc:land_cover";
+        const STYLE_NAME = "CLC_2018";
+        const PEREIRA_CENTER = [4.81, -75.69];
+        const PEREIRA_BOUNDS = [
+            [4.55, -75.85],
+            [5.05, -75.45]
+        ];
+        const CLC_COLORS = {
+            "111": "#cc0000",
+            "112": "#f80000",
+            "121": "#cc4d2a",
+            "122": "#d96545",
+            "123": "#e1846b",
+            "124": "#e79c87",
+            "125": "#eeb9aa",
+            "131": "#a600cc",
+            "132": "#d317ff",
+            "141": "#ff8080",
+            "142": "#ffafaf",
+            "211": "#ffffa6",
+            "212": "#eee800",
+            "213": "#ffff5f",
+            "214": "#e1d200",
+            "215": "#d2cd00",
+            "221": "#f2cca6",
+            "222": "#f2a64d",
+            "223": "#e6a600",
+            "224": "#cc900a",
+            "225": "#824a12",
+            "231": "#ccffcc",
+            "232": "#9eff9e",
+            "233": "#9effc8",
+            "241": "#ffe6a6",
+            "242": "#ffd875",
+            "243": "#ffc941",
+            "244": "#feb500",
+            "245": "#ffb03c",
+            "311": "#478f00",
+            "312": "#55ab00",
+            "313": "#61c200",
+            "314": "#70e000",
+            "315": "#80ff00",
+            "321": "#ccf24e",
+            "322": "#acdb0f",
+            "323": "#96bf0d",
+            "331": "#c2c2c2",
+            "332": "#b3b3b3",
+            "333": "#9e9e9e",
+            "334": "#898989",
+            "335": "#6565b4",
+            "411": "#a6a6ff",
+            "412": "#4d91ff",
+            "413": "#5050ff",
+            "421": "#ccccff",
+            "422": "#b7b7ff",
+            "423": "#a6a6e6",
+            "511": "#0000f8",
+            "512": "#0080ff",
+            "513": "#00b2ff",
+            "514": "#00cef2",
+            "521": "#45e0f5",
+            "523": "#ccf6ff",
+        };
+
+        const state = {
+            activeTool: "point",
+            vertices: [],
+            sketchLayer: null,
+            measureLayer: null,
+            marker: null,
+            buffer: null,
+            boundsBox: null,
+            resultLayer: null,
+            lastResult: null,
+            lastQuery: null,
+            health: null,
+            wmsResponse: null,
+            wfsResponse: null,
+        };
+
+        const els = {
+            apiStatus: document.getElementById("apiStatus"),
+            dbStatus: document.getElementById("dbStatus"),
+            wmsStatus: document.getElementById("wmsStatus"),
+            wfsStatus: document.getElementById("wfsStatus"),
+            featureStatus: document.getElementById("featureStatus"),
+            serviceDetail: document.getElementById("serviceDetail"),
+            bufferInput: null,
+            pointTool: null,
+            lineTool: null,
+            bufferPointTool: null,
+            polygonTool: null,
+            measureLineTool: null,
+            measureAreaTool: null,
+            finishTool: null,
+            queryHint: null,
+            runBoundsButton: null,
+            clearButton: null,
+            message: null,
+            resultCount: document.getElementById("resultCount"),
+            resultArea: document.getElementById("resultArea"),
+            reportButton: document.getElementById("reportButton"),
+            reportStatus: document.getElementById("reportStatus"),
+            measureWindow: null,
+            measureClose: null,
+            measureValue: null,
+            measureUnit: null,
+            measureVertices: null,
+            chartWrap: document.getElementById("chartWrap"),
+            legendPanel: document.getElementById("legendPanel"),
+            legendToggle: document.getElementById("legendToggle"),
+            legendToggleIcon: document.getElementById("legendToggleIcon"),
+            totalArea: document.getElementById("totalArea"),
+            classCount: document.getElementById("classCount"),
+            downloadFormat: document.getElementById("downloadFormat"),
+            downloadButton: document.getElementById("downloadButton"),
+            downloadStatus: document.getElementById("downloadStatus"),
+            resultsBody: document.getElementById("resultsBody"),
+        };
+
+        const map = L.map("map", {
+            zoomControl: false
+        }).setView(PEREIRA_CENTER, 11);
+        map.doubleClickZoom.disable();
+        map.fitBounds(PEREIRA_BOUNDS, {
+            padding: [24, 24]
+        });
+
+        L.control.zoom({
+            position: "topright"
+        }).addTo(map);
+        L.control.scale({
+            metric: true,
+            imperial: false
+        }).addTo(map);
+
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap",
+        }).addTo(map);
+
+        const esriImagery = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+            maxZoom: 19,
+            attribution: "Tiles © Esri",
+        });
+
+        const esriTopo = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", {
+            maxZoom: 19,
+            attribution: "Tiles © Esri",
+        });
+
+        const baseMaps = {
+            osm: {
+                label: "Calles",
+                layer: osm
+            },
+            imagery: {
+                label: "Satelital",
+                layer: esriImagery
+            },
+            topo: {
+                label: "Topográfico",
+                layer: esriTopo
+            },
+        };
+
+        const BaseMapControl = L.Control.extend({
+            options: {
+                position: "bottomleft"
+            },
+            onAdd() {
+                const container = L.DomUtil.create("div", "basemap-control leaflet-control");
+                container.setAttribute("aria-label", "Selector de mapa base");
+                container.innerHTML = `
+            <button class="basemap-toggle" type="button" aria-expanded="false" aria-controls="basemapMenu">
+              <span class="basemap-toggle-icon" aria-hidden="true"></span>
+              <span>Mapa base</span>
+            </button>
+            <div id="basemapMenu" class="basemap-menu">
+              <span class="basemap-control-title">Seleccionar mapa base</span>
+              <div class="basemap-options">
+                ${Object.entries(baseMaps).map(([key, item]) => `
+                  <button class="basemap-option${key === "osm" ? " active" : ""}" type="button" data-basemap="${key}" aria-pressed="${key === "osm"}">
+                    <span class="basemap-preview ${key}" aria-hidden="true"></span>
+                    <span>${item.label}</span>
+                  </button>
+                `).join("")}
+              </div>
+            </div>
+          `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            },
+        });
+
+        const baseMapControl = new BaseMapControl().addTo(map);
+        const baseMapContainer = baseMapControl.getContainer();
+        const baseMapToggle = baseMapContainer.querySelector(".basemap-toggle");
+
+        function setBaseMapMenu(open) {
+            baseMapContainer.classList.toggle("open", open);
+            document.querySelector(".map-wrap").classList.toggle("basemap-open", open);
+            baseMapToggle.setAttribute("aria-expanded", String(open));
+        }
+
+        baseMapToggle.addEventListener("click", () => {
+            setBaseMapMenu(!baseMapContainer.classList.contains("open"));
+        });
+
+        baseMapContainer.querySelectorAll("[data-basemap]").forEach((button) => {
+            button.addEventListener("click", () => {
+                Object.values(baseMaps).forEach(({
+                    layer
+                }) => map.removeLayer(layer));
+                baseMaps[button.dataset.basemap].layer.addTo(map).bringToBack();
+                baseMapContainer.querySelectorAll("[data-basemap]").forEach((option) => {
+                    const selected = option === button;
+                    option.classList.toggle("active", selected);
+                    option.setAttribute("aria-pressed", String(selected));
+                });
+                setBaseMapMenu(false);
+            });
+        });
+
+        const OverviewControl = L.Control.extend({
+            options: {
+                position: "bottomright"
+            },
+            onAdd() {
+                const container = L.DomUtil.create("div", "overview-control leaflet-control");
+                container.innerHTML = `<div id="overviewMap" aria-label="Minimapa de ubicación"></div><span class="overview-hint">Extensión visible</span>`;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            },
+        });
+
+        new OverviewControl().addTo(map);
+        const overviewMap = L.map("overviewMap", {
+            attributionControl: false,
+            zoomControl: false,
+            dragging: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            touchZoom: false,
+        });
+        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", {
+            maxZoom: 19
+        }).addTo(overviewMap);
+        const overviewBounds = L.rectangle(map.getBounds(), {
+            color: "#ffffff",
+            weight: 7,
+            opacity: 0.95,
+            fillOpacity: 0,
+            interactive: false,
+        }).addTo(overviewMap);
+        const overviewBoundsFrame = L.rectangle(map.getBounds(), {
+            color: "#081f2d",
+            weight: 3,
+            opacity: 1,
+            dashArray: "8 5",
+            fillColor: "#fbe550",
+            fillOpacity: 0.18,
+            interactive: false,
+        }).addTo(overviewMap);
+        const overviewCenter = L.circleMarker(map.getCenter(), {
+            radius: 3.5,
+            color: "#ffffff",
+            weight: 2,
+            fillColor: "#081f2d",
+            fillOpacity: 1,
+            interactive: false,
+        }).addTo(overviewMap);
+
+        function syncOverviewMap() {
+            overviewMap.setView(map.getCenter(), Math.max(map.getZoom() - 2, 6), {
+                animate: false
+            });
+            overviewBounds.setBounds(map.getBounds());
+            overviewBoundsFrame.setBounds(map.getBounds());
+            overviewBounds.bringToFront();
+            overviewBoundsFrame.bringToFront();
+            overviewCenter.setLatLng(map.getCenter());
+            overviewCenter.bringToFront();
+        }
+
+        map.on("moveend zoomend", syncOverviewMap);
+        syncOverviewMap();
+
+        const clcWms = L.tileLayer.wms(WMS_URL, {
+            layers: LAYER_NAME,
+            styles: STYLE_NAME,
+            format: "image/png",
+            transparent: true,
+            opacity: 0.85,
+            version: "1.1.1",
+            attribution: "CLC 2018 · Colombia en Mapas",
+        }).addTo(map);
+
+        const layerControl = L.control.layers(
+            null, {
+                "Coberturas CLC 2018": clcWms,
+            }, {
+                collapsed: true,
+                position: "topleft"
+            },
+        ).addTo(map);
+
+        const layerControlContainer = layerControl.getContainer();
+        const originalLayerToggle = layerControlContainer.querySelector(".leaflet-control-layers-toggle");
+        const layerControlToggle = originalLayerToggle.cloneNode(true);
+        originalLayerToggle.replaceWith(layerControlToggle);
+        layerControl._layersLink = layerControlToggle;
+        L.DomEvent.off(layerControlContainer, "mouseenter", layerControl._expandSafely, layerControl);
+        L.DomEvent.off(layerControlContainer, "mouseleave", layerControl.collapse, layerControl);
+        layerControlToggle.setAttribute("aria-expanded", "false");
+        layerControlToggle.setAttribute("title", "Abrir o cerrar capas");
+        L.DomEvent.on(layerControlToggle, "click", (event) => {
+            L.DomEvent.stop(event);
+            const isExpanded = layerControlContainer.classList.contains("leaflet-control-layers-expanded");
+            if (isExpanded) {
+                layerControl.collapse();
+            } else {
+                layerControl.expand();
+            }
+            layerControlToggle.setAttribute("aria-expanded", String(!isExpanded));
+        });
+        L.DomEvent.on(layerControlToggle, "keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                layerControlToggle.click();
+                L.DomEvent.preventDefault(event);
+            }
+        });
+      map.on("click", () => layerControlToggle.setAttribute("aria-expanded", "false"));
+
+      const overlaysContainer = layerControlContainer.querySelector(".leaflet-control-layers-overlays");
+      const layerPanelHeader = document.createElement("div");
+      layerPanelHeader.className = "layer-panel-header";
+      layerPanelHeader.innerHTML = `
+        <h3>Capas</h3>
+        <button class="layer-close" type="button" aria-label="Cerrar capas">×</button>
+      `;
+      overlaysContainer.parentElement.insertBefore(layerPanelHeader, overlaysContainer);
+      const layerClose = layerPanelHeader.querySelector(".layer-close");
+      L.DomEvent.disableClickPropagation(layerPanelHeader);
+      layerClose.addEventListener("click", () => {
+        layerControl.collapse();
+        layerControlToggle.setAttribute("aria-expanded", "false");
+        layerControlToggle.focus();
+      });
+
+        function addLayerOpacityControl(title, wmsLayer, initialValue, isPrimary = false) {
+            const layerLabel = Array.from(overlaysContainer.querySelectorAll("label"))
+                .find((label) => label.textContent.trim() === title);
+            if (!layerLabel) return;
+
+            const control = document.createElement("div");
+            control.className = "layer-opacity-control";
+            const row = document.createElement("div");
+            row.className = "opacity-row";
+            const caption = document.createElement("span");
+            caption.textContent = "Transparencia";
+            const output = document.createElement("output");
+            output.textContent = `${initialValue}%`;
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.min = "0";
+            slider.max = "100";
+            slider.step = "5";
+            slider.value = String(initialValue);
+            slider.setAttribute("aria-label", `Opacidad de ${title}`);
+            row.append(caption, output);
+            control.append(row, slider);
+            layerLabel.insertAdjacentElement("afterend", control);
+
+            slider.addEventListener("input", () => {
+                wmsLayer.setOpacity(Number(slider.value) / 100);
+                output.textContent = `${slider.value}%`;
+            });
+            L.DomEvent.disableClickPropagation(control);
+            L.DomEvent.disableScrollPropagation(control);
+
+            if (isPrimary) {
+                els.opacitySlider = slider;
+                els.opacityValue = output;
+            }
+        }
+
+        addLayerOpacityControl("Coberturas CLC 2018", clcWms, 85, true);
+
+        async function loadAutomaticLayers() {
+            try {
+                const response = await fetch(`${API_BASE}/layers`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const catalog = await response.json();
+
+                const automaticLayers = [];
+                catalog.layers.filter((item) => !item.is_primary).forEach((item) => {
+                    const wmsLayer = L.tileLayer.wms(WMS_URL, {
+                        layers: item.qualified_name,
+                        styles: item.style_name || "",
+                        format: "image/png",
+                        transparent: true,
+                        opacity: 1,
+                        version: "1.1.1",
+                    });
+                    layerControl.addOverlay(wmsLayer, item.title);
+                    automaticLayers.push({ title: item.title, layer: wmsLayer });
+                });
+                // addOverlay() rebuilds the list, so attach each slider only
+                // after every checkbox has been registered.
+                addLayerOpacityControl("Coberturas CLC 2018", clcWms, 85, true);
+                automaticLayers.forEach(({ title, layer }) => {
+                    addLayerOpacityControl(title, layer, 100);
+                });
+            } catch (error) {
+                console.warn("No fue posible cargar el catálogo de capas", error);
+            }
+        }
+
+        loadAutomaticLayers();
+
+        const MeasureControl = L.Control.extend({
+            options: {
+                position: "topleft"
+            },
+            onAdd() {
+                const container = L.DomUtil.create("div", "measure-control leaflet-control");
+                container.innerHTML = `
+            <button class="measure-control-toggle" type="button" title="Herramientas de medición" aria-label="Abrir herramientas de medición" aria-expanded="false"><span aria-hidden="true">↔</span> Medición</button>
+            <div class="measure-control-panel" aria-live="polite">
+              <div class="measure-window-header">
+                <h3>Medición</h3>
+                <button id="measureClose" class="measure-close" type="button" aria-label="Cerrar medición">×</button>
+              </div>
+              <div class="measure-actions">
+                <button id="measureLineTool" class="secondary" type="button">Distancia</button>
+                <button id="measureAreaTool" class="secondary" type="button">Área</button>
+                <button id="measureFinish" class="secondary" type="button">Finalizar</button>
+                <button id="measureClear" class="secondary" type="button">Limpiar</button>
+              </div>
+              <div class="metric-grid">
+                <div class="metric">
+                  <strong id="measureValue">0</strong>
+                  <span id="measureUnit">sin medición</span>
+                </div>
+                <div class="metric">
+                  <strong id="measureVertices">0</strong>
+                  <span>vértices</span>
+                </div>
+              </div>
+            </div>
+          `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            },
+        });
+
+        const measureControl = new MeasureControl().addTo(map);
+        els.measureWindow = measureControl.getContainer();
+        els.measureClose = els.measureWindow.querySelector("#measureClose");
+        els.measureLineTool = els.measureWindow.querySelector("#measureLineTool");
+        els.measureAreaTool = els.measureWindow.querySelector("#measureAreaTool");
+        els.measureValue = els.measureWindow.querySelector("#measureValue");
+        els.measureUnit = els.measureWindow.querySelector("#measureUnit");
+        els.measureVertices = els.measureWindow.querySelector("#measureVertices");
+        els.measureToggle = els.measureWindow.querySelector(".measure-control-toggle");
+        els.measureFinish = els.measureWindow.querySelector("#measureFinish");
+        els.measureClear = els.measureWindow.querySelector("#measureClear");
+
+        const BufferControl = L.Control.extend({
+            options: {
+                position: "topleft"
+            },
+            onAdd() {
+                const container = L.DomUtil.create("div", "buffer-control leaflet-control");
+                container.innerHTML = `
+            <button class="buffer-control-toggle" type="button" title="Consulta espacial" aria-label="Abrir consulta espacial" aria-expanded="false"><span aria-hidden="true">◎</span> Consulta espacial</button>
+            <div class="buffer-control-panel">
+              <div class="measure-window-header">
+                <h3>Consulta espacial</h3>
+                <button id="bufferClose" class="measure-close" type="button" aria-label="Cerrar consulta espacial">×</button>
+              </div>
+              <label>
+                Distancia del buffer (m)
+                <input id="bufferInput" type="number" min="50" max="50000" step="50" value="1000">
+              </label>
+              <div class="measure-actions" style="margin-top:10px">
+                <button id="pointTool" type="button">Identificar</button>
+                <button id="bufferPointTool" class="secondary" type="button">Punto + buffer</button>
+                <button id="lineTool" class="secondary" type="button">Línea + buffer</button>
+                <button id="polygonTool" class="secondary" type="button">Polígono</button>
+                <button id="runBoundsButton" class="secondary" type="button">Consultar vista</button>
+                <button id="bufferFinish" class="secondary" type="button">Finalizar dibujo</button>
+              </div>
+              <button id="bufferClear" class="secondary" type="button" style="width:100%">Limpiar consulta</button>
+              <p id="queryHint" class="hint" style="margin-top:10px">Haz clic sobre una cobertura para consultar sus atributos directamente.</p>
+              <p id="message" class="msg"></p>
+            </div>
+          `;
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+                return container;
+            },
+        });
+
+        const bufferControl = new BufferControl().addTo(map);
+        els.bufferWindow = bufferControl.getContainer();
+        els.bufferToggle = els.bufferWindow.querySelector(".buffer-control-toggle");
+        els.bufferClose = els.bufferWindow.querySelector("#bufferClose");
+        els.bufferInput = els.bufferWindow.querySelector("#bufferInput");
+        els.pointTool = els.bufferWindow.querySelector("#pointTool");
+        els.bufferPointTool = els.bufferWindow.querySelector("#bufferPointTool");
+        els.lineTool = els.bufferWindow.querySelector("#lineTool");
+        els.polygonTool = els.bufferWindow.querySelector("#polygonTool");
+        els.runBoundsButton = els.bufferWindow.querySelector("#runBoundsButton");
+        els.finishTool = els.bufferWindow.querySelector("#bufferFinish");
+        els.clearButton = els.bufferWindow.querySelector("#bufferClear");
+        els.queryHint = els.bufferWindow.querySelector("#queryHint");
+        els.message = els.bufferWindow.querySelector("#message");
+        els.bufferFinish = els.bufferWindow.querySelector("#bufferFinish");
+        els.bufferClear = els.bufferWindow.querySelector("#bufferClear");
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                },
+                ...options,
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`${response.status} ${response.statusText}: ${text.slice(0, 240)}`);
+            }
+
+            return response.json();
+        }
+
+        function setStatus(element, label, ok) {
+            element.classList.toggle("ok", ok);
+            element.classList.toggle("warn", !ok);
+            element.innerHTML = `<span class="dot"></span> ${label}`;
+        }
+
+        function setMessage(text, isError = false) {
+            els.message.textContent = text;
+            els.message.classList.toggle("error", isError);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function showMeasureWindow() {
+            els.measureWindow.classList.add("open");
+            els.measureToggle.setAttribute("aria-expanded", "true");
+        }
+
+        function hideMeasureWindow() {
+            els.measureWindow.classList.remove("open");
+            els.measureToggle.setAttribute("aria-expanded", "false");
+        }
+
+        function showBufferWindow() {
+            els.bufferWindow.classList.add("open");
+            els.bufferToggle.setAttribute("aria-expanded", "true");
+        }
+
+        function hideBufferWindow() {
+            els.bufferWindow.classList.remove("open");
+            els.bufferToggle.setAttribute("aria-expanded", "false");
+        }
+
+        function clearMeasurement() {
+            ["sketchLayer", "measureLayer"].forEach((key) => {
+                if (state[key]) {
+                    map.removeLayer(state[key]);
+                    state[key] = null;
+                }
+            });
+            state.vertices = [];
+            els.measureValue.textContent = "0";
+            els.measureUnit.textContent = "sin medición";
+            els.measureVertices.textContent = "0";
+            setActiveTool("point");
+            setMessage("Medición limpiada.");
+        }
+
+        function formatNumber(value, digits = 2) {
+            return new Intl.NumberFormat("es-CO", {
+                maximumFractionDigits: digits,
+                minimumFractionDigits: value && value < 1 ? Math.min(digits, 2) : 0,
+            }).format(Number(value || 0));
+        }
+
+        function boundsToPolygon(bounds) {
+            const west = bounds.getWest();
+            const south = bounds.getSouth();
+            const east = bounds.getEast();
+            const north = bounds.getNorth();
+
+            return {
+                type: "Polygon",
+                coordinates: [
+                    [
+                        [west, south],
+                        [east, south],
+                        [east, north],
+                        [west, north],
+                        [west, south],
+                    ]
+                ],
+            };
+        }
+
+        function featureStyle(feature) {
+            const code = String(feature.properties.codigo || "");
+            const palette = {
+                "1": "#d7191c",
+                "2": "#fdae61",
+                "3": "#1a9641",
+                "4": "#abd9e9",
+                "5": "#2c7bb6",
+            };
+
+            return {
+                color: "#081f2d",
+                weight: 1.2,
+                opacity: 0.9,
+                fillColor: palette[code.slice(0, 1)] || "#7b61ff",
+                fillOpacity: 0.55,
+            };
+        }
+
+        function popupHtml(properties) {
+            const levels = [1, 2, 3, 4, 5, 6]
+                .map((level) => properties[`nivel_${level}`])
+                .filter(Boolean)
+                .map((value, index) => `<strong>N${index + 1}</strong>: ${value}`)
+                .join("<br>");
+
+            return `
+          <div class="popup-title">${properties.leyenda || "Cobertura CLC"}</div>
+          <div class="popup-meta">
+            <strong>Código:</strong> ${properties.codigo ?? "N/D"}<br>
+            <strong>Área:</strong> ${formatNumber(properties.area_ha, 4)} ha<br>
+            <strong>% AOI:</strong> ${formatNumber(properties.percentage_of_query, 2)}%<br>
+            ${levels ? `<hr>${levels}` : ""}
+          </div>
+        `;
+        }
+
+        function drawResults(geojson) {
+            if (state.resultLayer) {
+                map.removeLayer(state.resultLayer);
+            }
+
+            state.resultLayer = L.geoJSON(geojson, {
+                style: featureStyle,
+                onEachFeature: (feature, layer) => {
+                    layer.bindPopup(popupHtml(feature.properties || {}));
+                },
+            }).addTo(map);
+
+            if (geojson.features.length) {
+                map.fitBounds(state.resultLayer.getBounds(), {
+                    padding: [30, 30],
+                    maxZoom: 15
+                });
+            }
+        }
+
+        function renderResults(geojson) {
+            const features = geojson.features || [];
+            const metadata = geojson.metadata || {};
+            const summaries = summarizeResultFeatures(features);
+
+            els.resultCount.textContent = formatNumber(summaries.length, 0);
+            els.resultArea.textContent = formatNumber(metadata.total_area_ha || 0, 4);
+
+            if (!features.length) {
+                els.resultsBody.innerHTML = `<tr><td colspan="4">La consulta no interceptó coberturas.</td></tr>`;
+                renderResultChart([]);
+                return;
+            }
+
+            renderResultChart(summaries);
+
+            els.resultsBody.innerHTML = summaries
+                .map((item) => `
+            <tr>
+              <td>${escapeHtml(item.label)}</td>
+              <td>${escapeHtml(item.levelOne)}</td>
+              <td>${formatNumber(item.area, 4)}</td>
+              <td>${formatNumber(item.percentage, 2)}</td>
+            </tr>
+          `)
+                .join("");
+        }
+
+        function summarizeResultFeatures(features) {
+            const grouped = new Map();
+
+            features.forEach(({
+                properties = {}
+            }) => {
+                const label = properties.leyenda || "Sin clasificación";
+                const code = String(properties.codigo || "");
+                const key = `${code}\u0000${label}`;
+                const current = grouped.get(key) || {
+                    label,
+                    levelOne: properties.nivel_1 || "N/D",
+                    code,
+                    area: 0,
+                };
+                current.area += Number(properties.area_ha || 0);
+                grouped.set(key, current);
+            });
+
+            const entries = [...grouped.values()].sort((a, b) => b.area - a.area);
+            const totalArea = entries.reduce((sum, item) => sum + item.area, 0);
+            return entries.map((item) => ({
+                ...item,
+                percentage: totalArea > 0 ? (item.area / totalArea) * 100 : 0,
+            }));
+        }
+
+        function renderResultChart(summaries) {
+            if (!summaries.length) {
+                els.chartWrap.innerHTML = `<div class="chart-empty">La consulta no tiene datos para graficar.</div>`;
+                return;
+            }
+
+            let cursor = 0;
+            const slices = summaries.map((item) => {
+                const start = cursor;
+                cursor += item.percentage;
+                const color = CLC_COLORS[item.code.slice(0, 3)] || "#8b9690";
+                return {
+                    ...item,
+                    color,
+                    start,
+                    end: cursor
+                };
+            });
+            const gradient = slices.map((item) => `${item.color} ${item.start}% ${item.end}%`).join(", ");
+
+            els.chartWrap.innerHTML = `
+          <div class="pie-chart" style="background: conic-gradient(${gradient})" role="img" aria-label="Distribución porcentual de ${slices.length} coberturas">
+            <div class="pie-chart-center"><strong>100%</strong><span>resultado</span></div>
+          </div>
+          <div class="chart-legend">
+            ${slices.map((item) => `
+              <div class="chart-legend-item" title="${escapeHtml(item.label)}">
+                <span class="chart-swatch" style="background:${item.color}"></span>
+                <span class="chart-label">${escapeHtml(item.label)}</span>
+                <span class="chart-percent">${formatNumber(item.percentage, 1)}%</span>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        }
+
+        async function runIntersection(payload, label) {
+            setMessage(`Ejecutando consulta: ${label}...`);
+            const geojson = await fetchJson(`${API_BASE}/intersections`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+            state.lastResult = geojson;
+            state.lastQuery = structuredClone(payload);
+            els.reportButton.disabled = !(geojson.features || []).length;
+            els.reportStatus.textContent = "";
+            drawResults(geojson);
+            renderResults(geojson);
+            if (geojson.metadata.query_type === "point" && state.resultLayer) {
+                state.resultLayer.eachLayer((layer) => layer.openPopup());
+            }
+            setMessage(`Consulta finalizada: ${geojson.metadata.feature_count} coberturas interceptadas.`);
+        }
+
+        function currentBuffer() {
+            return Number(els.bufferInput.value || 1000);
+        }
+
+        function setActiveTool(tool) {
+            state.activeTool = tool;
+            state.vertices = [];
+
+            if (state.sketchLayer) {
+                map.removeLayer(state.sketchLayer);
+                state.sketchLayer = null;
+            }
+
+            const labels = {
+                point: "Consulta directa activa. Haz clic sobre una cobertura, sin buffer.",
+                buffer_point: "Buffer de punto activo. Haz clic para consultar alrededor del punto.",
+                line: "Herramienta activa: línea. Haz clic para agregar vértices y doble clic o Finalizar dibujo para consultar.",
+                polygon: "Herramienta activa: polígono. Haz clic para agregar vértices y doble clic o Finalizar dibujo para consultar.",
+                measure_line: "Herramienta activa: medir distancia. Haz clic para agregar vértices y finaliza con doble clic.",
+                measure_area: "Herramienta activa: medir área. Haz clic para agregar vértices y finaliza con doble clic.",
+            };
+
+            els.queryHint.textContent = labels[tool];
+            els.pointTool.classList.toggle("active", tool === "point");
+            els.lineTool.classList.toggle("active", tool === "line");
+            els.polygonTool.classList.toggle("active", tool === "polygon");
+            els.bufferPointTool.classList.toggle("active", tool === "buffer_point");
+            els.measureLineTool.classList.toggle("active", tool === "measure_line");
+            els.measureAreaTool.classList.toggle("active", tool === "measure_area");
+            els.pointTool.classList.toggle("secondary", tool !== "point");
+            els.lineTool.classList.toggle("secondary", tool !== "line");
+            els.polygonTool.classList.toggle("secondary", tool !== "polygon");
+            els.bufferPointTool.classList.toggle("secondary", tool !== "buffer_point");
+            els.measureLineTool.classList.toggle("secondary", tool !== "measure_line");
+            els.measureAreaTool.classList.toggle("secondary", tool !== "measure_area");
+            map.getContainer().style.cursor = "crosshair";
+
+            if (tool === "measure_line" || tool === "measure_area") {
+                showMeasureWindow();
+                renderMeasurement("0", "capturando vértices", 0);
+            } else {
+                hideMeasureWindow();
+            }
+
+            if (tool === "point" || tool === "buffer_point" || tool === "line" || tool === "polygon") {
+                showBufferWindow();
+            } else {
+                hideBufferWindow();
+            }
+        }
+
+        function lineGeoJson(vertices) {
+            return {
+                type: "LineString",
+                coordinates: vertices.map((latlng) => [latlng.lng, latlng.lat]),
+            };
+        }
+
+        function polygonGeoJson(vertices) {
+            const coordinates = vertices.map((latlng) => [latlng.lng, latlng.lat]);
+            coordinates.push([vertices[0].lng, vertices[0].lat]);
+
+            return {
+                type: "Polygon",
+                coordinates: [coordinates],
+            };
+        }
+
+        function updateSketch() {
+            if (state.sketchLayer) {
+                map.removeLayer(state.sketchLayer);
+                state.sketchLayer = null;
+            }
+
+            if (!state.vertices.length) return;
+
+            if (state.activeTool === "line" || state.activeTool === "measure_line") {
+                state.sketchLayer = L.polyline(state.vertices, {
+                    color: "#081f2d",
+                    weight: 3,
+                }).addTo(map);
+            }
+
+            if (state.activeTool === "polygon" || state.activeTool === "measure_area") {
+                state.sketchLayer = L.polygon(state.vertices, {
+                    color: "#081f2d",
+                    weight: 2,
+                    fillColor: "#95cad6",
+                    fillOpacity: 0.08,
+                }).addTo(map);
+            }
+        }
+
+        function distanceMeters(vertices) {
+            return vertices.slice(1).reduce((total, vertex, index) => {
+                return total + vertices[index].distanceTo(vertex);
+            }, 0);
+        }
+
+        function polygonAreaMeters(vertices) {
+            if (vertices.length < 3) return 0;
+
+            const earthRadius = 6378137;
+            const ring = [...vertices, vertices[0]];
+            let area = 0;
+
+            for (let i = 0; i < ring.length - 1; i += 1) {
+                const p1 = ring[i];
+                const p2 = ring[i + 1];
+                const lon1 = p1.lng * Math.PI / 180;
+                const lon2 = p2.lng * Math.PI / 180;
+                const lat1 = p1.lat * Math.PI / 180;
+                const lat2 = p2.lat * Math.PI / 180;
+                area += (lon2 - lon1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+            }
+
+            return Math.abs(area * earthRadius * earthRadius / 2);
+        }
+
+        function renderMeasurement(value, unit, verticesCount) {
+            showMeasureWindow();
+            els.measureValue.textContent = value;
+            els.measureUnit.textContent = unit;
+            els.measureVertices.textContent = formatNumber(verticesCount, 0);
+        }
+
+        function measurementLabel() {
+            if (state.activeTool === "measure_line" && state.vertices.length >= 2) {
+                const meters = distanceMeters(state.vertices);
+                const value = meters >= 1000 ?
+                    formatNumber(meters / 1000, 3) :
+                    formatNumber(meters, 2);
+                const unit = meters >= 1000 ? "km" : "m";
+                return {
+                    value,
+                    unit: `${unit} medidos`,
+                    message: `${value} ${unit}`
+                };
+            }
+
+            if (state.activeTool === "measure_area" && state.vertices.length >= 3) {
+                const squareMeters = polygonAreaMeters(state.vertices);
+                const hectares = squareMeters / 10000;
+                const value = hectares >= 100 ?
+                    formatNumber(squareMeters / 1000000, 4) :
+                    formatNumber(hectares, 4);
+                const unit = hectares >= 100 ? "km² medidos" : "ha medidas";
+                const messageUnit = hectares >= 100 ? "km²" : "ha";
+                return {
+                    value,
+                    unit,
+                    message: `${value} ${messageUnit}`
+                };
+            }
+
+            return null;
+        }
+
+        function updateMeasurementPreview() {
+            if (state.activeTool !== "measure_line" && state.activeTool !== "measure_area") return null;
+
+            const label = measurementLabel();
+            if (!label) {
+                const minimum = state.activeTool === "measure_line" ? "2 vértices" : "3 vértices";
+                renderMeasurement("0", `faltan ${minimum}`, state.vertices.length);
+                return null;
+            }
+
+            renderMeasurement(label.value, label.unit, state.vertices.length);
+            return label;
+        }
+
+        function finishMeasurement() {
+            if (state.measureLayer) {
+                map.removeLayer(state.measureLayer);
+                state.measureLayer = null;
+            }
+
+            if (state.activeTool === "measure_line") {
+                if (state.vertices.length < 2) {
+                    setMessage("La medición de distancia requiere al menos dos vértices.", true);
+                    return;
+                }
+
+                state.measureLayer = L.polyline(state.vertices, {
+                    color: "#081f2d",
+                    weight: 3,
+                    dashArray: "8 6",
+                }).addTo(map);
+
+                const label = updateMeasurementPreview();
+                if (label) {
+                    setMessage(`Medición de distancia: ${label.message}.`);
+                }
+                return;
+            }
+
+            if (state.activeTool === "measure_area") {
+                if (state.vertices.length < 3) {
+                    setMessage("La medición de área requiere al menos tres vértices.", true);
+                    return;
+                }
+
+                state.measureLayer = L.polygon(state.vertices, {
+                    color: "#081f2d",
+                    weight: 2,
+                    dashArray: "8 6",
+                    fillColor: "#fbe550",
+                    fillOpacity: 0.12,
+                }).addTo(map);
+
+                const label = updateMeasurementPreview();
+                if (label) {
+                    setMessage(`Medición de área: ${label.message}.`);
+                }
+            }
+        }
+
+        async function runPointQuery(latlng) {
+            if (state.marker) map.removeLayer(state.marker);
+            if (state.buffer) map.removeLayer(state.buffer);
+
+            state.marker = L.marker(latlng).addTo(map);
+
+            await runIntersection({
+                point: {
+                    longitude: latlng.lng,
+                    latitude: latlng.lat,
+                },
+                input_srid: 4326,
+            }, "identificación directa de cobertura");
+        }
+
+        async function runPointBufferQuery(latlng) {
+            const radius = currentBuffer();
+
+            if (state.marker) map.removeLayer(state.marker);
+            if (state.buffer) map.removeLayer(state.buffer);
+
+            state.marker = L.marker(latlng).addTo(map);
+            state.buffer = L.circle(latlng, {
+                radius,
+                color: "#081f2d",
+                weight: 2,
+                fillColor: "#95cad6",
+                fillOpacity: 0.08,
+            }).addTo(map);
+
+            await runIntersection({
+                point: {
+                    longitude: latlng.lng,
+                    latitude: latlng.lat,
+                },
+                radius_m: radius,
+                input_srid: 4326,
+            }, `punto + buffer ${formatNumber(radius, 0)} m`);
+        }
+
+        async function runLineQuery() {
+            if (state.vertices.length < 2) {
+                setMessage("La línea requiere al menos dos vértices.", true);
+                return;
+            }
+
+            const buffer = currentBuffer();
+            await runIntersection({
+                geometry: lineGeoJson(state.vertices),
+                buffer_m: buffer,
+                input_srid: 4326,
+            }, `línea + buffer ${formatNumber(buffer, 0)} m`);
+        }
+
+        async function runPolygonQuery() {
+            if (state.vertices.length < 3) {
+                setMessage("El polígono requiere al menos tres vértices.", true);
+                return;
+            }
+
+            await runIntersection({
+                geometry: polygonGeoJson(state.vertices),
+                input_srid: 4326,
+            }, "polígono dibujado");
+        }
+
+        async function finishDrawing() {
+            if (state.activeTool === "measure_line" || state.activeTool === "measure_area") {
+                finishMeasurement();
+                return;
+            }
+
+            if (state.activeTool === "line") {
+                await runLineQuery();
+                return;
+            }
+
+            if (state.activeTool === "polygon") {
+                await runPolygonQuery();
+                return;
+            }
+
+            setMessage("La herramienta punto consulta directamente con cada clic.");
+        }
+
+        async function runBoundsQuery() {
+            const bounds = map.getBounds();
+
+            if (state.boundsBox) map.removeLayer(state.boundsBox);
+            state.boundsBox = L.rectangle(bounds, {
+                color: "#081f2d",
+                weight: 2,
+                dashArray: "6 6",
+                fillOpacity: 0.04,
+            }).addTo(map);
+
+            await runIntersection({
+                geometry: boundsToPolygon(bounds),
+                input_srid: 4326,
+            }, "vista actual del mapa");
+        }
+
+        async function loadHealth() {
+            try {
+                const health = await fetchJson(`${API_BASE}/health`);
+                state.health = health;
+                setStatus(els.apiStatus, "API OK", health.status === "ok");
+                setStatus(els.dbStatus, `PostGIS ${health.database.feature_count} entidades`, health.database.connected);
+                setStatus(els.featureStatus, `SRID ${health.data.srid}`, true);
+                return health;
+            } catch (error) {
+                setStatus(els.apiStatus, "API error", false);
+                setStatus(els.dbStatus, "PostGIS error", false);
+                setMessage(error.message, true);
+                throw error;
+            }
+        }
+
+        async function showServiceDetail(service) {
+            els.serviceDetail.innerHTML = `<strong>Consultando servicio…</strong>`;
+            els.serviceDetail.classList.add("visible");
+            try {
+                if (service === "wms") {
+                    await checkWms();
+                } else if (service === "wfs") {
+                    await checkWfs();
+                } else {
+                    await loadHealth();
+                }
+            } catch {
+                // El detalle conserva la respuesta de error registrada por la verificación.
+            }
+
+            const health = state.health;
+            const schema = health?.database?.schema || "gis";
+            const table = health?.database?.table || "land_cover";
+            const healthResponse = health
+                ? JSON.stringify(health, null, 2)
+                : "No se recibió una respuesta válida del servicio.";
+            const databaseResponse = health?.database
+                ? JSON.stringify(health.database, null, 2)
+                : "No se recibió una respuesta válida de PostGIS.";
+            const sridResponse = health?.data
+                ? JSON.stringify(health.data, null, 2)
+                : "No se recibió una respuesta válida para el SRID.";
+            const wmsResponse = state.wmsResponse
+                ? `HTTP ${state.wmsResponse.status} ${state.wmsResponse.statusText}\nContent-Type: ${state.wmsResponse.contentType}\n\n${state.wmsResponse.body}`
+                : "No se recibió una respuesta válida del servicio WMS.";
+            const wfsResponse = state.wfsResponse
+                ? `HTTP ${state.wfsResponse.status} ${state.wfsResponse.statusText}\nContent-Type: ${state.wfsResponse.contentType}\n\n${state.wfsResponse.body}`
+                : "No se recibió una respuesta válida del servicio WFS.";
+            const details = {
+                api: {
+                    title: "Verificación de API",
+                    query: `PETICIÓN\nGET ${API_BASE}/health\n\nRESPUESTA\n${healthResponse}`,
+                },
+                postgis: {
+                    title: "Consulta ejecutada en PostGIS",
+                    query: `PETICIÓN\nGET ${API_BASE}/health\n\nSQL\nSELECT 1 AS db_ok,\n       postgis_version() AS postgis_version,\n       (SELECT count(*) FROM ${schema}.${table}) AS feature_count;\n\nRESPUESTA\n${databaseResponse}`,
+                },
+                wms: {
+                    title: "Verificación del servicio WMS",
+                    query: `PETICIÓN\nGET ${WMS_URL}?service=WMS&version=1.1.1&request=GetCapabilities\n\nRESPUESTA\n${wmsResponse}`,
+                },
+                wfs: {
+                    title: "Verificación del servicio WFS",
+                    query: `PETICIÓN\nGET ${WFS_URL}?service=WFS&version=2.0.0&request=GetFeature&typeNames=${LAYER_NAME}&count=1&outputFormat=application/json\n\nRESPUESTA\n${wfsResponse}`,
+                },
+                srid: {
+                    title: "Verificación del sistema de referencia",
+                    query: `PETICIÓN\nGET ${API_BASE}/health\nCampo consultado: data.srid\n\nRESPUESTA\n${sridResponse}`,
+                },
+            };
+            const detail = details[service];
+            if (!detail) return;
+
+            document.querySelectorAll("[data-service]").forEach((button) => {
+                button.classList.toggle("active", button.dataset.service === service);
+            });
+            els.serviceDetail.innerHTML = `<strong>${escapeHtml(detail.title)}</strong><code>${escapeHtml(detail.query)}</code>`;
+            els.serviceDetail.classList.add("visible");
+        }
+
+        async function loadStatistics() {
+            try {
+                const stats = await fetchJson(`${API_BASE}/statistics`);
+                els.totalArea.textContent = formatNumber(stats.total_area_ha, 2);
+                els.classCount.textContent = formatNumber(stats.count, 0);
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function checkWms() {
+            const params = new URLSearchParams({
+                service: "WMS",
+                version: "1.1.1",
+                request: "GetCapabilities",
+            });
+
+            try {
+                const response = await fetch(`${WMS_URL}?${params.toString()}`);
+                const body = await response.text();
+                state.wmsResponse = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: response.headers.get("content-type") || "N/D",
+                    body,
+                };
+                setStatus(els.wmsStatus, response.ok ? "WMS OK" : "WMS error", response.ok);
+                return state.wmsResponse;
+            } catch (error) {
+                state.wmsResponse = {
+                    status: 0,
+                    statusText: "Error de conexión",
+                    contentType: "N/D",
+                    body: error.message,
+                };
+                setStatus(els.wmsStatus, "WMS error", false);
+                throw error;
+            }
+        }
+
+        async function checkWfs() {
+            const params = new URLSearchParams({
+                service: "WFS",
+                version: "2.0.0",
+                request: "GetFeature",
+                typeNames: LAYER_NAME,
+                count: "1",
+                outputFormat: "application/json",
+            });
+
+            try {
+                const response = await fetch(`${WFS_URL}?${params.toString()}`);
+                const body = await response.text();
+                state.wfsResponse = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    contentType: response.headers.get("content-type") || "N/D",
+                    body,
+                };
+                const isFeatureCollection = response.ok && body.includes('"FeatureCollection"');
+                setStatus(els.wfsStatus, isFeatureCollection ? "WFS OK" : "WFS error", isFeatureCollection);
+                if (!isFeatureCollection) throw new Error("WFS no devolvió una colección de entidades válida.");
+                return state.wfsResponse;
+            } catch (error) {
+                if (!state.wfsResponse) {
+                    state.wfsResponse = {
+                        status: 0,
+                        statusText: "Error de conexión",
+                        contentType: "N/D",
+                        body: error.message,
+                    };
+                }
+                setStatus(els.wfsStatus, "WFS error", false);
+                throw error;
+            }
+        }
+
+        async function downloadLayer() {
+            const format = els.downloadFormat.value;
+            els.downloadButton.disabled = true;
+            els.downloadStatus.textContent = "Preparando archivo…";
+
+            try {
+                const response = await fetch(`${API_BASE}/download?format=${encodeURIComponent(format)}`);
+                if (!response.ok) {
+                    const payload = await response.json().catch(() => ({}));
+                    throw new Error(payload.detail?.message || `Error HTTP ${response.status}`);
+                }
+
+                const disposition = response.headers.get("Content-Disposition") || "";
+                const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+                const plainName = disposition.match(/filename="?([^";]+)"?/i);
+                const filename = encodedName ?
+                    decodeURIComponent(encodedName[1]) :
+                    (plainName?.[1] || `CLC_2018_Pereira.${format}`);
+                const url = URL.createObjectURL(await response.blob());
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                els.downloadStatus.textContent = `Descarga lista: ${filename}`;
+            } catch (error) {
+                els.downloadStatus.textContent = error.message;
+            } finally {
+                els.downloadButton.disabled = false;
+            }
+        }
+
+        async function downloadSpatialReport() {
+            if (!state.lastResult?.features?.length) {
+                els.reportStatus.textContent = "Realiza una consulta espacial antes de generar el informe.";
+                return;
+            }
+
+            const bounds = map.getBounds();
+            const reportResult = {
+                ...state.lastResult,
+                features: state.lastResult.features.map((feature) => ({
+                    type: "Feature",
+                    geometry: null,
+                    properties: feature.properties,
+                })),
+            };
+            const payload = {
+                result: reportResult,
+                bbox: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
+                query: state.lastQuery,
+            };
+            els.reportButton.disabled = true;
+            els.reportStatus.textContent = "Generando informe PDF…";
+
+            try {
+                const response = await fetch(`${API_BASE}/reports/spatial-query.pdf`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.detail?.message || `Error HTTP ${response.status}`);
+                }
+
+                const url = URL.createObjectURL(await response.blob());
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "informe_consulta_espacial_clc.pdf";
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                els.reportStatus.textContent = "Informe PDF descargado.";
+            } catch (error) {
+                els.reportStatus.textContent = error.message;
+            } finally {
+                els.reportButton.disabled = false;
+            }
+        }
+
+        function clearMap() {
+            ["marker", "buffer", "boundsBox", "resultLayer", "sketchLayer", "measureLayer"].forEach((key) => {
+                if (state[key]) {
+                    map.removeLayer(state[key]);
+                    state[key] = null;
+                }
+            });
+            state.vertices = [];
+            renderMeasurement("0", "sin medición", 0);
+            hideMeasureWindow();
+            els.resultCount.textContent = "0";
+            els.resultArea.textContent = "0";
+            state.lastResult = null;
+            state.lastQuery = null;
+            els.reportButton.disabled = true;
+            els.reportStatus.textContent = "";
+            els.chartWrap.innerHTML = `<div class="chart-empty">Haz clic sobre una cobertura para consultar sus datos.</div>`;
+            els.resultsBody.innerHTML = `<tr><td colspan="4">Sin consulta activa.</td></tr>`;
+            setMessage("Consulta limpiada.");
+        }
+
+        els.pointTool.addEventListener("click", () => setActiveTool("point"));
+        els.bufferPointTool.addEventListener("click", () => setActiveTool("buffer_point"));
+        els.lineTool.addEventListener("click", () => setActiveTool("line"));
+        els.polygonTool.addEventListener("click", () => setActiveTool("polygon"));
+        els.measureLineTool.addEventListener("click", () => setActiveTool("measure_line"));
+        els.measureAreaTool.addEventListener("click", () => setActiveTool("measure_area"));
+        els.finishTool.addEventListener("click", () => {
+            finishDrawing().catch((error) => setMessage(error.message, true));
+        });
+
+        els.runBoundsButton.addEventListener("click", () => {
+            runBoundsQuery().catch((error) => setMessage(error.message, true));
+        });
+
+        els.clearButton.addEventListener("click", clearMap);
+        els.downloadButton.addEventListener("click", downloadLayer);
+        els.reportButton.addEventListener("click", downloadSpatialReport);
+        document.querySelectorAll("[data-service]").forEach((button) => {
+            button.addEventListener("click", () => showServiceDetail(button.dataset.service));
+        });
+
+        els.measureToggle.addEventListener("click", showMeasureWindow);
+        els.measureClose.addEventListener("click", hideMeasureWindow);
+        els.measureFinish.addEventListener("click", () => {
+            finishDrawing().catch((error) => setMessage(error.message, true));
+        });
+        els.measureClear.addEventListener("click", clearMeasurement);
+        els.bufferToggle.addEventListener("click", showBufferWindow);
+        els.bufferClose.addEventListener("click", hideBufferWindow);
+
+        els.opacitySlider.addEventListener("input", () => {
+            const opacity = Number(els.opacitySlider.value) / 100;
+            clcWms.setOpacity(opacity);
+            els.opacityValue.textContent = `${els.opacitySlider.value}%`;
+        });
+
+        els.legendToggle.addEventListener("click", () => {
+            const isOpen = els.legendPanel.classList.toggle("open");
+            els.legendToggle.setAttribute("aria-expanded", String(isOpen));
+            els.legendToggleIcon.textContent = isOpen ? "−" : "+";
+        });
+
+        map.on("click", (event) => {
+            if (state.activeTool === "point") {
+                runPointQuery(event.latlng).catch((error) => setMessage(error.message, true));
+                return;
+            }
+
+            if (state.activeTool === "buffer_point") {
+                runPointBufferQuery(event.latlng).catch((error) => setMessage(error.message, true));
+                return;
+            }
+
+            state.vertices.push(event.latlng);
+            updateSketch();
+            const measurement = updateMeasurementPreview();
+            const suffix = measurement ? ` · ${measurement.message}` : "";
+            setMessage(`${state.vertices.length} vértice(s) capturado(s)${suffix}.`);
+        });
+
+        map.on("dblclick", (event) => {
+            if (state.activeTool === "point" || state.activeTool === "buffer_point") return;
+            L.DomEvent.stop(event.originalEvent);
+            finishDrawing().catch((error) => setMessage(error.message, true));
+        });
+
+        Promise.allSettled([
+            loadHealth(),
+            loadStatistics(),
+            checkWms(),
+            checkWfs(),
+        ]);
+    </script>
+</body>
+
+</html>

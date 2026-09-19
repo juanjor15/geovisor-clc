@@ -1,0 +1,128 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: geovisor_postgis
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - geovisor_net
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./data/sample:/data/sample:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  data-loader:
+    build:
+      context: ./database
+    container_name: geovisor_data_loader
+    env_file:
+      - .env
+    depends_on:
+      postgis:
+        condition: service_healthy
+    networks:
+      - geovisor_net
+    volumes:
+      - ./data/sample:/data/sample:ro
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: geovisor_backend
+    env_file:
+      - .env
+    depends_on:
+      data-loader:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    networks:
+      - geovisor_net
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  geoserver:
+    image: docker.osgeo.org/geoserver:2.25.2
+    container_name: geovisor_geoserver
+    env_file:
+      - .env
+    depends_on:
+      data-loader:
+        condition: service_completed_successfully
+    ports:
+      - "8081:8080"
+    networks:
+      - geovisor_net
+    volumes:
+      - geoserver_data:/opt/geoserver_data
+      - ./geoserver/provision:/opt/geoserver_provision:ro
+      - ./geoserver/styles:/opt/geoserver_styles:ro
+      - ./geoserver/user_projections:/opt/geoserver_data/user_projections:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:8080/geoserver/clc/wms?service=WMS&version=1.3.0&request=GetCapabilities' >/dev/null && curl -fsS 'http://localhost:8080/geoserver/clc/wfs?service=WFS&version=2.0.0&request=GetCapabilities' >/dev/null"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  geoserver-provision:
+    image: curlimages/curl:8.11.1
+    container_name: geovisor_geoserver_provision
+    env_file:
+      - .env
+    depends_on:
+      geoserver:
+        condition: service_healthy
+      data-loader:
+        condition: service_completed_successfully
+    networks:
+      - geovisor_net
+    volumes:
+      - ./geoserver/provision:/opt/geoserver_provision:ro
+      - ./data/sample:/data/sample:ro
+      - ./geoserver/styles:/opt/geoserver_styles:ro
+    command: ["sh", "/opt/geoserver_provision/provision_geoserver.sh"]
+    restart: "no"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: geovisor_frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+      geoserver:
+        condition: service_healthy
+      geoserver-provision:
+        condition: service_completed_successfully
+    ports:
+      - "8080:80"
+    networks:
+      - geovisor_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgis_data:
+  geoserver_data:
+
+networks:
+  geovisor_net:
+    driver: bridge
