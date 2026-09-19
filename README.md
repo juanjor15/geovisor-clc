@@ -45,7 +45,7 @@ docker compose version
 
 ## Clonacion e instalacion
 
-Una vez publicado el proyecto en GitHub, clone el repositorio y entre en su carpeta:
+Clone el repositorio y entre en su carpeta:
 
 ```bash
 git clone https://github.com/juanjor15/geovisor-clc.git
