@@ -1,0 +1,7 @@
+# Keep Linux container entrypoints executable across Windows checkouts.
+*.sh text eol=lf
+
+# Keep container and Compose configuration consistent across platforms.
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

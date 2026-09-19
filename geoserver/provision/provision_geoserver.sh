@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+# This script runs inside a Linux container and must retain LF line endings.
 set -eu
 
 : "${GEOSERVER_URL:=http://geoserver:8080/geoserver}"

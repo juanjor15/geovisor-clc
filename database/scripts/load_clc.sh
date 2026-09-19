@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# This script runs inside a Linux container and must retain LF line endings.
 set -euo pipefail
 
 : "${POSTGRES_HOST:=postgis}"
