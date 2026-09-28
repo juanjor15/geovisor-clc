@@ -596,11 +596,30 @@ La solucion se considera funcional cuando:
 | Modulo 4 - GeoServer | Implementado |
 | Modulo 5 - Frontend | Implementado |
 
-## Declaracion de Uso de IA
+## Declaración obligatoria de uso de asistentes de inteligencia artificial
 
-Durante el desarrollo se utilizo asistencia de IA para interpretar los requerimientos de la prueba, proponer la arquitectura inicial, estructurar el repositorio y apoyar la redaccion tecnica. Todas las decisiones de implementacion, validaciones, ajustes sobre datos geoespaciales y pruebas finales fueron revisadas y pueden ser defendidas por el desarrollador responsable.
+### 1. Herramientas utilizadas durante el desarrollo
 
-El uso de IA no reemplaza la comprension tecnica del proyecto. El desarrollador se compromete a explicar el funcionamiento del codigo, justificar las decisiones de arquitectura y demostrar la solucion ejecutandose correctamente.
+- [x] Asistentes integrados al editor (Codex)
+- [x] Modelos de chat generativo (ChatGPT)
+- [ ] Ninguna herramienta de IA fue utilizada.
+
+### 2. Naturaleza del apoyo recibido
+
+- [x] Estructuración de plantillas base (scaffolding de Docker, Compose o boilerplate de API/frontend).
+- [x] Asistencia en sintaxis de consultas espaciales, visor web o configuración de GeoServer.
+- [x] Depuración de errores de configuración o dependencias.
+- [x] Redacción de documentación y pruebas.
+
+### 3. Validación crítica del desarrollador
+
+Las sugerencias generadas mediante asistentes de inteligencia artificial fueron revisadas, probadas y adaptadas manualmente durante el desarrollo.
+
+Se realizaron ajustes principalmente en la configuración y orquestación de los contenedores Docker, integración entre PostgreSQL/PostGIS, GeoServer y el backend, consultas y operaciones espaciales, configuración de servicios OGC y funcionamiento del geovisor.
+
+También se verificaron manualmente aspectos relacionados con sistemas de referencia espacial (SRID), estructura y carga de los datos CORINE Land Cover, cálculo de áreas, respuestas GeoJSON, dependencias, versiones de los componentes y comunicación entre servicios.
+
+Las herramientas de inteligencia artificial se utilizaron como apoyo al desarrollo, depuración y documentación. Las decisiones arquitectónicas, validación funcional y adaptación de la solución fueron realizadas por el desarrollador.
 
 ## Licencia y datos de terceros
 
