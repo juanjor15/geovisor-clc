@@ -615,11 +615,20 @@ La solucion se considera funcional cuando:
 
 Las sugerencias generadas mediante asistentes de inteligencia artificial fueron revisadas, probadas y adaptadas manualmente durante el desarrollo.
 
-Se realizaron ajustes principalmente en la configuración y orquestación de los contenedores Docker, integración entre PostgreSQL/PostGIS, GeoServer y el backend, consultas y operaciones espaciales, configuración de servicios OGC y funcionamiento del geovisor.
+Algunas sugerencias requirieron corrección o adaptación manual para resolver inconsistencias relacionadas con:
 
-También se verificaron manualmente aspectos relacionados con sistemas de referencia espacial (SRID), estructura y carga de los datos CORINE Land Cover, cálculo de áreas, respuestas GeoJSON, dependencias, versiones de los componentes y comunicación entre servicios.
+- La lógica espacial, especialmente la validación y normalización de sistemas de referencia espacial (SRID), las transformaciones de coordenadas, las intersecciones y el cálculo de áreas.
+- La estructura y carga de los datos CORINE Land Cover en PostgreSQL/PostGIS.
+- La compatibilidad entre versiones y formatos utilizados por GeoServer, los estilos SLD y los servicios OGC WMS/WFS.
+- La configuración y orquestación de los contenedores Docker, las dependencias y la comunicación entre PostgreSQL/PostGIS, GeoServer, el backend y el frontend.
+- El rendimiento y tamaño de las respuestas GeoJSON y de las solicitudes empleadas para generar informes.
+- El funcionamiento del geovisor, la presentación de resultados y la integración entre sus herramientas de consulta espacial.
 
 Las herramientas de inteligencia artificial se utilizaron como apoyo al desarrollo, depuración y documentación. Las decisiones arquitectónicas, validación funcional y adaptación de la solución fueron realizadas por el desarrollador.
+
+### Compromiso de sustentación
+
+Toda decisión arquitectónica y línea de código será objeto de sustentación técnica en la fase de entrevista. El candidato asume la autoría y responsabilidad íntegra sobre la solución entregada.
 
 ## Licencia y datos de terceros
 
